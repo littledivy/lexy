@@ -1,4 +1,59 @@
 
+const alphabets = [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H",
+  "I",
+  "J",
+  "K",
+  "L",
+  "M",
+  "N",
+  "O",
+  "P",
+  "Q",
+  "R",
+  "S",
+  "T",
+  "U",
+  "V",
+  "W",
+  "X",
+  "Y",
+  "Z",
+  "a",
+  "b",
+  "c",
+  "d",
+  "e",
+  "f",
+  "g",
+  "h",
+  "i",
+  "j",
+  "k",
+  "l",
+  "m",
+  "n",
+  "o",
+  "p",
+  "q",
+  "r",
+  "s",
+  "t",
+  "u",
+  "v",
+  "w",
+  "x",
+  "y",
+  "z",
+];
+
 interface Token {
   type: string;
   value: string | number;
@@ -9,6 +64,8 @@ interface Options {
 }
 
 type TokenHandler = (char: string) => Token ;
+
+type Matcher = string | string[];
 
 export default class Lexer {
   input: string;
@@ -22,8 +79,8 @@ export default class Lexer {
   options: Options = {};
   // Middleware token handlers
   handlers: Map<string, TokenHandler> = new Map();
-  // Tokens 
-  tokens: Token[] = [];
+  // Keywords identified by lexer
+  idents: string[] = [];
 
   constructor(source: string, options?: Options) {
     this.input = source;
@@ -31,8 +88,22 @@ export default class Lexer {
     this.read_char();
   }
   
-  use(match: string, fn: TokenHandler) {
-    this.handlers.set(match, fn);
+  use(match: Matcher, fn: TokenHandler) {
+    if(Array.isArray(match)) {
+      for(let i in match) {
+        this._use(match[i], fn);
+      }
+    } else {
+      this._use(match, fn);
+    }
+  }
+
+  private _use(m: string, fn: TokenHandler) {
+    this.handlers.set(m, fn)
+  }
+
+  register(...idents: string[]) {
+     this.idents = [...this.idents, ...idents]
   }
 
   read_char() {
@@ -75,6 +146,8 @@ export default class Lexer {
     let straightup = this.handlers.get(this.ch);
     if(straightup) {
       token = straightup.bind(this)(this.ch);
+    } else {
+      token = this.read_ident() || token;
     }
     this.read_char();
     return token;
@@ -93,17 +166,47 @@ export default class Lexer {
       }
     }
   }
+  
+  read_ident(): Token {
+    let start_pos = this.pos;
+    loop:
+    for (;;) {
+      if (alphabets.includes(this.ch.toString())) {
+        this.read_char();
+      } else {
+        break loop;
+      }
+    }
 
+    let literal = this.input.substring(start_pos, this.pos);
+    let token = { type: "unknown", value: literal };
+    if(this.idents.includes(literal)) {
+      token.type = "ident"
+    }
+    return token
+  }
 }
 
-let lex = new Lexer("1 + 1 / 2", { skip_whitspace: true });
+let lex = new Lexer("(1 + 1) / 2 add", { skip_whitspace: true });
 
-lex.use("1", function(ch: string) {
+const operators = ["+", "-", "*", "/", "%", "^", "="];
+const numbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+const parans = ["(", ")"];
+
+lex.use(numbers, function(ch: string) {
   return { type: "number", value: ch }
 })
 
-lex.use("+", function(ch: string) {
+lex.use(operators, function(ch: string) {
   return { type: "operator", value: ch }
 })
 
-console.log(lex.lex())
+lex.use(parans, function(ch: string) {
+  return { type: "bracket", value: ch }
+})
+
+lex.register("add");
+
+for (let tokens in lex.lex()) {
+  
+}
