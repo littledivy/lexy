@@ -1,4 +1,4 @@
-
+// XXX: customisable alphabet list
 const alphabets = [
   "A",
   "B",
@@ -54,18 +54,18 @@ const alphabets = [
   "z",
 ];
 
-interface Token {
+export interface Token {
   type: string;
   value: string | number;
 }
 
-interface Options {
+export interface Options {
   skip_whitspace?: boolean;
 }
 
-type TokenHandler = (char: string) => Token ;
+export type TokenHandler = (char: string) => Token;
 
-type Matcher = string | string[];
+export type Matcher = string | string[];
 
 export default class Lexer {
   input: string;
@@ -84,13 +84,13 @@ export default class Lexer {
 
   constructor(source: string, options?: Options) {
     this.input = source;
-    this.options = options || {}
+    this.options = options || {};
     this.read_char();
   }
-  
+
   use(match: Matcher, fn: TokenHandler) {
-    if(Array.isArray(match)) {
-      for(let i in match) {
+    if (Array.isArray(match)) {
+      for (let i in match) {
         this._use(match[i], fn);
       }
     } else {
@@ -99,11 +99,11 @@ export default class Lexer {
   }
 
   private _use(m: string, fn: TokenHandler) {
-    this.handlers.set(m, fn)
+    this.handlers.set(m, fn);
   }
 
   register(...idents: string[]) {
-     this.idents = [...this.idents, ...idents]
+    this.idents = [...this.idents, ...idents];
   }
 
   read_char() {
@@ -131,20 +131,20 @@ export default class Lexer {
   lex(): Token[] {
     let tokens: Token[] = [];
     let tok: Token;
-    while(tok = this.next()) {
-      if(tok.type == "eof") break;
-      tokens.push(tok)
+    while (tok = this.next()) {
+      if (tok.type == "eof") break;
+      tokens.push(tok);
     }
-    return tokens
+    return tokens;
   }
 
   next(): Token {
     // Skip whitespace (` ` & `\t`)
-    if(this.options.skip_whitspace) this.skip_whitspace();
+    if (this.options.skip_whitspace) this.skip_whitspace();
     let token: Token = { type: "unknown", value: this.ch };
-    if(this.ch == 0) return { type: "eof", value: this.ch };
+    if (this.ch == 0) return { type: "eof", value: this.ch };
     let straightup = this.handlers.get(this.ch);
-    if(straightup) {
+    if (straightup) {
       token = straightup.bind(this)(this.ch);
     } else {
       token = this.read_ident() || token;
@@ -166,7 +166,7 @@ export default class Lexer {
       }
     }
   }
-  
+
   read_ident(): Token {
     let start_pos = this.pos;
     loop:
@@ -180,33 +180,9 @@ export default class Lexer {
 
     let literal = this.input.substring(start_pos, this.pos);
     let token = { type: "unknown", value: literal };
-    if(this.idents.includes(literal)) {
-      token.type = "ident"
+    if (this.idents.includes(literal)) {
+      token.type = "ident";
     }
-    return token
+    return token;
   }
-}
-
-let lex = new Lexer("(1 + 1) / 2 add", { skip_whitspace: true });
-
-const operators = ["+", "-", "*", "/", "%", "^", "="];
-const numbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-const parans = ["(", ")"];
-
-lex.use(numbers, function(ch: string) {
-  return { type: "number", value: ch }
-})
-
-lex.use(operators, function(ch: string) {
-  return { type: "operator", value: ch }
-})
-
-lex.use(parans, function(ch: string) {
-  return { type: "bracket", value: ch }
-})
-
-lex.register("add");
-
-for (let tokens in lex.lex()) {
-  
 }
